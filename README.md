@@ -5,17 +5,10 @@
 ⚽ Football Player & Tech Enthusiast  
 🌍 From Burundi, currently in India  
 
----
-
 ## 🚀 Skills
-
-- C# & .NET (Windows Forms)
 - HTML, CSS, JavaScript
-- Node.js & MongoDB
 - Basic Machine Learning
 - Python(for machine learning)
-
----
 
 ## 📌 Projects
 
@@ -27,4 +20,4 @@ Manages players, login system, database connection.
 Breast Cancer Classification Model  
 Data preprocessing + accuracy comparison.
 linear and logistic regression for house pricing
----
+
