@@ -1,0 +1,289 @@
+<title>Forge Protocol Intake</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow scouting-form column, numbered sections, sticky progress bar + copy button at the bottom */
+:root {
+  --bg: #F1F4F0; --surface: #FFFFFF; --fg: #13201A; --muted: #5B6B62; --line: #D5DDD6;
+  --accent: #1E7A4C; --accent-soft: #DDEFE4; --gold: #C98A0B;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E1612; --surface: #16211B; --fg: #E6EEE8; --muted: #93A59A; --line: #2A3A31;
+  --accent: #48C185; --accent-soft: #1C3428; --gold: #F0B43A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0E1612; --surface: #16211B; --fg: #E6EEE8; --muted: #93A59A; --line: #2A3A31;
+  --accent: #48C185; --accent-soft: #1C3428; --gold: #F0B43A; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 16px/1.5 var(--body); }
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 32px 140px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-direction: column; gap: 8px; border-bottom: 3px solid var(--fg); padding-bottom: 20px }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--gold) }
+h1 { font: 800 clamp(40px, 9vw, 64px)/.95 var(--display); text-transform: uppercase; margin: 0; text-wrap: balance }
+.lede { color: var(--muted); margin: 0; max-width: 60ch }
+.rules { display: flex; flex-wrap: wrap; gap: 8px 16px; font: 500 12px/1.4 var(--mono); color: var(--muted) }
+
+section { display: flex; flex-direction: column; gap: 18px }
+.sec-head { display: flex; align-items: baseline; gap: 14px; border-bottom: 1px solid var(--line); padding-bottom: 8px }
+.num { font: 800 44px/1 var(--display); color: var(--accent); font-variant-numeric: tabular-nums; min-width: 1.4em }
+h2 { font: 600 26px/1.1 var(--display); text-transform: uppercase; letter-spacing: .02em; margin: 0 }
+.sec-sub { font-size: 14px; color: var(--muted); margin: 2px 0 0 }
+
+.q { display: flex; flex-direction: column; gap: 8px; min-width: 0 }
+.q > .label { font-weight: 600 }
+.q > .label small { font-weight: 400; color: var(--muted); margin-left: 6px; font-size: 13px }
+.hint { font-size: 13px; color: var(--muted); margin: -4px 0 0 }
+.chips { display: flex; flex-wrap: wrap; gap: 8px }
+.chip { position: relative; display: inline-flex; align-items: center; padding: 8px 14px; border: 1.5px solid var(--line);
+  border-radius: 999px; background: var(--surface); cursor: pointer; font-size: 15px; user-select: none; transition: border-color .12s, background .12s }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer }
+.chip:hover { border-color: var(--accent) }
+.chip:has(input:checked) { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600 }
+.chip:has(input:focus-visible) { outline: 2px solid var(--gold); outline-offset: 2px }
+input[type=text], input[type=number], input[type=time], textarea {
+  width: 100%; font: inherit; color: var(--fg); background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; }
+input:focus-visible, textarea:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; border-color: var(--accent) }
+textarea { min-height: 76px; resize: vertical }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px }
+.row .q > .label { font-size: 14px }
+input[type=time], input[type=number] { font-family: var(--mono); font-variant-numeric: tabular-nums }
+.other { max-width: 360px }
+
+.note { border-left: 3px solid var(--gold); background: var(--surface); padding: 12px 14px; font-size: 14px; color: var(--muted); border-radius: 0 8px 8px 0 }
+
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+  padding-top: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); z-index: 5 }
+.bar-in { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
+.prog { flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px; min-width: 0 }
+.prog-txt { font: 500 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.track { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden }
+.fill { height: 100%; width: 0; background: var(--accent); transition: width .2s }
+button { font: 600 15px/1 var(--body); padding: 12px 18px; border-radius: 10px; border: 1.5px solid var(--accent); cursor: pointer }
+.primary { background: var(--accent); color: var(--bg) }
+.ghost { background: transparent; color: var(--fg); border-color: var(--line) }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }
+#out-wrap { display: flex; flex-direction: column; gap: 10px }
+#out { font: 13px/1.5 var(--mono); min-height: 240px }
+.toast { font: 500 13px/1 var(--mono); color: var(--accent) }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Forge Protocol · Player intake · ~10 min</span>
+    <h1>Before we build your program</h1>
+    <p class="lede">Tap the answers that fit you. Pick several where it says "pick all". Skip anything you don't know. When you're done, press <b>Copy my answers</b> and paste them back to me in the chat.</p>
+    <div class="rules"><span>● Be honest, nobody else sees this</span><span>● Answers save on this device as you go</span></div>
+  </header>
+  <form id="form" autocomplete="off"></form>
+  <section id="out-wrap" hidden>
+    <div class="sec-head"><span class="num">✓</span><div><h2>Your answers</h2><p class="sec-sub">If copying didn't work, select all of this text and copy it by hand.</p></div></div>
+    <textarea id="out" readonly></textarea>
+  </section>
+</div>
+
+<div class="bar"><div class="bar-in">
+  <div class="prog"><span class="prog-txt" id="prog-txt">0 answered</span><div class="track"><div class="fill" id="fill"></div></div></div>
+  <span class="toast" id="toast" aria-live="polite"></span>
+  <button type="button" class="ghost" id="clear">Clear</button>
+  <button type="button" class="primary" id="copy">Copy my answers</button>
+</div></div>
+
+<script>
+const SKILLS = ["Speed", "Stamina", "First touch", "Dribbling", "Passing", "Finishing", "Weak foot", "Heading", "Defending / tackling", "Vision / positioning", "Strength / duels"];
+const S = [
+ { t: "Your days right now", sub: "How the last months or years actually went, not how you wish they went.", q: [
+   { row: [
+     { id: "wake_wd", l: "Weekday wake-up", k: "time" }, { id: "bed_wd", l: "Weekday bedtime", k: "time" },
+     { id: "wake_we", l: "Weekend wake-up", k: "time" }, { id: "bed_we", l: "Weekend bedtime", k: "time" } ] },
+   { id: "phone", l: "Phone time per day", k: "one", o: ["Under 2h", "2–4h", "4–6h", "6–8h", "8h+"] },
+   { id: "apps", l: "Apps that eat most of your time", k: "many", o: ["TikTok", "Instagram", "YouTube", "Snapchat", "X / Twitter", "WhatsApp", "Netflix / series", "Video games", "Football highlights", "Other"] },
+   { id: "procrast", l: "When you procrastinate, you're usually…", k: "many", o: ["Scrolling", "Sleeping / napping", "Gaming", "Watching series / movies", "Overthinking in bed", "Chatting / calling", "Snacking", "Doing small fake-productive tasks", "Other"] },
+   { id: "triggers", l: "What sets it off", k: "many", o: ["Task feels too big", "Don't know where to start", "Tired", "Alone in my room", "Stressed or sad", "Phone is next to me", "Right after eating", "Late at night", "Fear of failing", "No deadline", "Other"] },
+   { id: "worst_time", l: "Your weakest time of day", k: "one", o: ["Morning", "After lunch", "Evening", "Late night"] },
+   { id: "tried", l: "Have you tried a routine before?", k: "one", o: ["Never really", "Yes, quit in the first week", "Yes, lasted 2–4 weeks", "Yes, lasted months then dropped"] },
+   { id: "fail_why", l: "Why did past routines break?", k: "many", o: ["Too strict from day 1", "Missed one day, then quit", "Motivation faded", "Schedule changed (exams, travel)", "Got sick or injured", "Didn't track anything", "Nobody held me accountable", "Other"] },
+   { id: "best_time", l: "Once I was disciplined when…", k: "text", ph: "e.g. at 17 during football season with my coach" },
+   { id: "typical_day", l: "Your typical day, in your own words", k: "long", opt: true, ph: "e.g. wake 10:30, phone in bed till 11:30, class 13–16, nap, YouTube, eat late, sleep 2am" } ] },
+
+ { t: "Your body", sub: "So fat loss and training load start at the right level.", q: [
+   { row: [
+     { id: "height", l: "Height (cm)", k: "num" }, { id: "weight", l: "Weight (kg)", k: "num" },
+     { id: "waist", l: "Waist (cm)", k: "num", opt: true }, { id: "goal_w", l: "Goal weight (kg)", k: "num", opt: true } ] },
+   { id: "injuries", l: "Injuries or health issues", k: "many", o: ["None", "Knee", "Ankle", "Hamstring / groin", "Back", "Asthma / breathing", "Heart / blood pressure", "Other"] },
+   { id: "run5k", l: "5 km run today", k: "one", o: ["Can't run 5 km yet", "Over 35 min", "30–35 min", "25–30 min", "Under 25 min"] },
+   { id: "pushups", l: "Push-ups in a row", k: "one", o: ["0–5", "6–15", "16–30", "30+"] },
+   { id: "meals", l: "Meals per day", k: "one", o: ["1", "2", "3", "4+", "It changes every day"] },
+   { id: "eating", l: "Eating habits (pick all)", k: "many", o: ["Skip breakfast", "Eat late at night", "Fast food often", "Sugary drinks / juice", "Sweets & snacks", "Big portions", "Mostly rice / bread / pasta", "Low protein", "I mostly eat healthy"] },
+   { id: "alcohol", l: "Alcohol", k: "one", o: ["Never", "Sometimes", "Weekly", "Often"] },
+   { id: "smoke", l: "Smoking / vaping / shisha", k: "one", o: ["Never", "Sometimes", "Daily"] },
+   { id: "cook", l: "Who makes your food?", k: "one", o: ["I cook", "Family", "Roommates", "I buy most meals", "University canteen"] },
+   { id: "budget", l: "Food budget", k: "one", o: ["Tight", "Medium", "Comfortable"] },
+   { id: "diet", l: "Food rules", k: "many", o: ["None", "Halal", "No pork", "Vegetarian", "I fast (Ramadan / other)", "Allergies", "Other"] },
+   { id: "access", l: "What you can use", k: "many", o: ["Gym", "Football pitch", "Park / running track", "Stairs / hill", "Space at home only", "Weights at home", "Jump rope", "Ball & cones", "Other"] } ] },
+
+ { t: "Football", sub: "The most important section. This decides what the training blocks look like.", q: [
+   { id: "position", l: "Position", k: "many", o: ["Goalkeeper", "Centre-back", "Full-back / wing-back", "Defensive mid", "Central mid", "Attacking mid / 10", "Winger", "Striker"] },
+   { id: "foot", l: "Strong foot", k: "one", o: ["Right", "Left", "Both"] },
+   { id: "level", l: "Level you play at now", k: "one", o: ["Not playing now", "Street / with friends", "Amateur club", "University team", "Academy", "Semi-pro"] },
+   { id: "years", l: "Years playing", k: "one", o: ["Under 3", "3–7", "8–12", "13+"] },
+   { id: "last_regular", l: "Last time you played regularly", k: "one", o: ["I play now", "Less than 6 months ago", "6–12 months ago", "1–3 years ago", "3+ years ago"] },
+   { id: "strengths", l: "Your strengths", k: "many", o: SKILLS },
+   { id: "weak", l: "Your weaknesses", k: "many", o: SKILLS },
+   { id: "train_with", l: "Who you train with", k: "one", o: ["A team with a coach", "A team, no coach", "Friends", "Mostly alone"] },
+   { id: "sessions", l: "Football sessions per week right now", k: "one", o: ["0", "1–2", "3–4", "5+"] },
+   { id: "target", l: "Your 12-month target", k: "one", o: ["Get fit and play regularly", "Make a club team", "Start for my university team", "Get trials (academy / semi-pro)", "Sign a pro contract"] },
+   { id: "dream", l: "Your big football dream, in one line", k: "text", opt: true, ph: "e.g. play in a top league in Europe" } ] },
+
+ { t: "MSc & responsibilities", sub: "Study is a fixed block, so I need its real shape.", q: [
+   { id: "field", l: "MSc field", k: "text", ph: "e.g. Data Science" },
+   { id: "msc_year", l: "Where you are in the MSc", k: "one", o: ["1st year", "2nd year / thesis", "Final months", "Other"] },
+   { id: "class_days", l: "Days with classes", k: "many", o: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] },
+   { id: "class_time", l: "Class times", k: "one", o: ["Mornings", "Afternoons", "Evenings", "Mixed", "Mostly online / self-study"] },
+   { id: "deadline", l: "Next big deadline", k: "text", opt: true, ph: "e.g. thesis proposal, 15 December" },
+   { id: "study_now", l: "Real focused study per day now", k: "one", o: ["Under 1h", "1–2h", "2–4h", "4h+"] },
+   { id: "job", l: "Work", k: "one", o: ["No job", "Part-time, under 15h/week", "Part-time, 15h+/week", "Full-time"] },
+   { id: "job_hours", l: "If you work, when?", k: "text", opt: true, ph: "e.g. Sat & Sun 10:00–18:00" },
+   { id: "commute", l: "Commute (one way)", k: "one", o: ["Under 15 min", "15–30 min", "30–60 min", "60 min+", "I study from home"] } ] },
+
+ { t: "Life setup", sub: "Where you are, who's around you, and what never moves.", q: [
+   { id: "city", l: "Country & city", k: "text", ph: "e.g. Belgium, Brussels" },
+   { id: "living", l: "You live", k: "one", o: ["Alone", "With family", "With roommates", "Student dorm"] },
+   { id: "nonneg", l: "Non-negotiables (pick all)", k: "many", o: ["Daily prayers", "Friday prayer", "Church / Mass", "Family calls", "Partner time", "Family duties", "Other"] },
+   { id: "early_wake", l: "Earliest wake-up you could hold for months", k: "one", o: ["5:00", "5:30", "6:00", "6:30", "7:00", "Later"] },
+   { id: "chrono", l: "You're naturally", k: "one", o: ["A morning person", "A night person", "Not sure"] },
+   { id: "sleep_h", l: "Hours of sleep you get now", k: "one", o: ["Under 6", "6–7", "7–8", "8+", "It's all over the place"] } ] },
+
+ { t: "Your mind", sub: "The program has to fit the person, not just the calendar.", q: [
+   { id: "y1", l: "The man I want to be in 1 year", k: "text", ph: "e.g. 15 kg lighter, playing every week, MSc on track" },
+   { id: "y3", l: "In 3 years", k: "text" },
+   { id: "y5", l: "In 5 years", k: "text" },
+   { id: "fall", l: "\"Falling\" means for me…", k: "many", o: ["Giving up on football", "Failing my MSc", "Staying overweight", "Wasting more years", "Letting my family down", "Losing myself mentally", "Other"] },
+   { id: "energy", l: "Your energy and mood lately", k: "one", o: ["Mostly high", "Up and down", "Often low", "Very low most days"] },
+   { id: "motiv", l: "What drives you", k: "many", o: ["Competition", "Proving people wrong", "My family", "Faith", "Seeing scores & streaks", "Rewards", "Stories of great athletes", "Music", "Other"] },
+   { id: "accountable", l: "Who could check on you weekly?", k: "one", o: ["A friend", "A partner", "Family", "A coach", "Only an app / tracker", "Nobody, I want to do this alone"] },
+   { id: "idols", l: "Who inspires you besides Kobe?", k: "text", opt: true, ph: "players, athletes, anyone" } ] },
+
+ { t: "How you want it", sub: "The final shape of the program.", q: [
+   { id: "format", l: "Format (pick all)", k: "many", o: ["Interactive phone app with score & streaks", "Printable timetable", "Spreadsheet", "Phone wallpapers with my rules"] },
+   { id: "tone", l: "Coaching voice", k: "one", o: ["Hard coach, no excuses", "Calm mentor", "Mix of both"] },
+   { id: "lang", l: "Language", k: "one", o: ["English", "French", "Other"] },
+   { id: "forge", l: "The Forge Protocol idea (5 layers, scoring, failure protocols)", k: "one", o: ["Love it, build it", "Like it, with changes", "I want something different"] },
+   { id: "changes", l: "Anything to add or change?", k: "long", opt: true, ph: "ideas, things I missed, anything" } ] }
+];
+
+const form = document.getElementById("form");
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ALL = [];
+
+function field(q) {
+  ALL.push(q);
+  const opt = q.opt ? "<small>optional</small>" : "";
+  let h = `<div class="q" data-q="${q.id}"><span class="label" id="l-${q.id}">${esc(q.l)}${opt}</span>`;
+  if (q.k === "one" || q.k === "many") {
+    if (q.k === "many") h += `<p class="hint">Pick all that fit</p>`;
+    h += `<div class="chips" role="group" aria-labelledby="l-${q.id}">`;
+    q.o.forEach((o, i) => {
+      h += `<label class="chip"><input type="${q.k === "one" ? "radio" : "checkbox"}" id="${q.id}-${i}" name="${q.id}" value="${esc(o)}">${esc(o)}</label>`;
+    });
+    h += `</div>`;
+    if (q.o.includes("Other")) h += `<input type="text" class="other" id="${q.id}-other" placeholder="Other: type it here" aria-label="${esc(q.l)}, other" hidden>`;
+  } else if (q.k === "long") {
+    h += `<textarea id="${q.id}" aria-labelledby="l-${q.id}" placeholder="${esc(q.ph || "")}"></textarea>`;
+  } else {
+    const type = q.k === "num" ? "number" : q.k === "time" ? "time" : "text";
+    h += `<input type="${type}" id="${q.id}" aria-labelledby="l-${q.id}" ${type === "number" ? 'inputmode="decimal" min="0"' : ""} placeholder="${esc(q.ph || "")}">`;
+  }
+  return h + `</div>`;
+}
+
+form.innerHTML = S.map((s, i) => `<section>
+  <div class="sec-head"><span class="num">${i + 1}</span><div><h2>${esc(s.t)}</h2><p class="sec-sub">${esc(s.sub)}</p></div></div>
+  ${s.q.map(q => q.row ? `<div class="row">${q.row.map(field).join("")}</div>` : field(q)).join("")}
+  ${i === 5 ? `<p class="note">If most days feel very low, that's worth telling a doctor or counsellor too. Many universities have free student counselling. A routine helps a lot, and it works even better alongside real support.</p>` : ""}
+</section>`).join("");
+
+function value(q) {
+  if (q.k === "one" || q.k === "many") {
+    let v = [...form.querySelectorAll(`input[name="${q.id}"]:checked`)].map(x => x.value);
+    const other = document.getElementById(`${q.id}-other`);
+    if (other && v.includes("Other") && other.value.trim()) v = v.map(x => x === "Other" ? "Other: " + other.value.trim() : x);
+    return v.join(", ");
+  }
+  return document.getElementById(q.id).value.trim();
+}
+
+function sync() {
+  ALL.forEach(q => {
+    const other = document.getElementById(`${q.id}-other`);
+    if (other) other.hidden = !form.querySelector(`input[name="${q.id}"][value="Other"]:checked`);
+  });
+  const done = ALL.filter(q => value(q)).length;
+  document.getElementById("prog-txt").textContent = `${done} / ${ALL.length} answered`;
+  document.getElementById("fill").style.width = (done / ALL.length * 100) + "%";
+}
+
+function save() {
+  const d = {};
+  form.querySelectorAll("input, textarea").forEach(el => {
+    if (el.type === "radio" || el.type === "checkbox") { if (el.checked) d[el.id] = 1; }
+    else if (el.value) d[el.id] = el.value;
+  });
+  try { localStorage.setItem("forge-intake", JSON.stringify(d)); } catch (e) {}
+}
+function load() {
+  let d = {};
+  try { d = JSON.parse(localStorage.getItem("forge-intake") || "{}"); } catch (e) {}
+  Object.entries(d).forEach(([id, v]) => {
+    const el = document.getElementById(id); if (!el) return;
+    if (el.type === "radio" || el.type === "checkbox") el.checked = true; else el.value = v;
+  });
+}
+
+function compile() {
+  const lines = ["FORGE PROTOCOL — MY INTAKE ANSWERS", ""];
+  S.forEach((s, i) => {
+    lines.push(`## ${i + 1}. ${s.t.toUpperCase()}`);
+    s.q.flatMap(q => q.row || [q]).forEach(q => lines.push(`- ${q.l}: ${value(q) || "(skipped)"}`));
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+
+let toastT;
+function toast(msg) {
+  const t = document.getElementById("toast"); t.textContent = msg;
+  clearTimeout(toastT); toastT = setTimeout(() => t.textContent = "", 3500);
+}
+
+form.addEventListener("input", () => { sync(); save(); });
+form.addEventListener("change", () => { sync(); save(); });
+form.addEventListener("submit", e => e.preventDefault());
+
+document.getElementById("copy").addEventListener("click", () => {
+  const text = compile();
+  const wrap = document.getElementById("out-wrap"), out = document.getElementById("out");
+  out.value = text; wrap.hidden = false;
+  const fallback = () => { out.focus(); out.select(); wrap.scrollIntoView({ behavior: "smooth" }); toast("Selected. Copy it and paste it in the chat"); };
+  try {
+    navigator.clipboard.writeText(text).then(() => toast("Copied. Paste it in the chat"), fallback);
+  } catch (e) { fallback(); }
+});
+
+let armed = false;
+document.getElementById("clear").addEventListener("click", e => {
+  if (!armed) { armed = true; e.target.textContent = "Tap again to clear all"; setTimeout(() => { armed = false; e.target.textContent = "Clear"; }, 3000); return; }
+  armed = false; e.target.textContent = "Clear";
+  form.reset(); try { localStorage.removeItem("forge-intake"); } catch (err) {}
+  document.getElementById("out-wrap").hidden = true; sync(); toast("Cleared");
+});
+
+load(); sync();
+</script>
