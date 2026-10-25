@@ -1,0 +1,943 @@
+<title>DIEZ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: phone-first match-centre app. Sticky header, one scrolling view, fixed bottom tab bar with the VAR button in the middle. */
+:root {
+  --bg: #F1F2EF; --surface: #FFFFFF; --surface-2: #E8EAE6; --fg: #121614; --muted: #5E6762; --line: #D8DCD8;
+  --garnet: #A3123A; --blue: #1D4AA8; --win: #1E8449; --draw: #B37F12; --loss: #C2352B; --on-accent: #FFFFFF;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0C0F12; --surface: #151A1F; --surface-2: #1D232A; --fg: #E8ECEE; --muted: #8F98A0; --line: #262D35;
+  --garnet: #E24A72; --blue: #6A97F2; --win: #3CC27A; --draw: #E2B04A; --loss: #F0604F; --on-accent: #0C0F12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0C0F12; --surface: #151A1F; --surface-2: #1D232A; --fg: #E8ECEE; --muted: #8F98A0; --line: #262D35;
+  --garnet: #E24A72; --blue: #6A97F2; --win: #3CC27A; --draw: #E2B04A; --loss: #F0604F; --on-accent: #0C0F12; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 16px/1.45 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+.pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.inner { max-width: 640px; margin: 0 auto }
+button { font: inherit; color: inherit; cursor: pointer }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px }
+
+/* header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--bg); border-bottom: 1px solid var(--line); padding-block: 10px }
+.top .inner { display: flex; align-items: center; gap: 12px }
+.brand { font: 800 26px/1 var(--display); letter-spacing: .04em; display: flex; align-items: baseline; gap: 6px }
+.brand b { color: var(--garnet) }
+.meta { font: 500 12px/1.3 var(--mono); color: var(--muted); flex: 1; min-width: 0; font-variant-numeric: tabular-nums }
+.sync { width: 8px; height: 8px; border-radius: 50%; background: var(--muted) }
+.sync.on { background: var(--win) }
+
+main { padding-block: 16px 120px; display: flex; flex-direction: column; gap: 16px }
+main > .inner { display: flex; flex-direction: column; gap: 16px; width: 100% }
+h2 { font: 700 22px/1.1 var(--display); text-transform: uppercase; letter-spacing: .03em; margin: 0; text-wrap: balance }
+h3 { font: 700 17px/1.2 var(--display); text-transform: uppercase; letter-spacing: .04em; margin: 0 }
+p { margin: 0 }
+.lab { font: 500 11px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.muted { color: var(--muted) }
+.small { font-size: 14px }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0 }
+.stack { display: flex; flex-direction: column; gap: 10px }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+.code-line { font-style: italic; color: var(--muted); font-size: 15px }
+
+/* rating */
+.rating { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center }
+.badge { width: 92px; height: 92px; border-radius: 18px; display: grid; place-items: center; font: 800 44px/1 var(--display); color: var(--on-accent); font-variant-numeric: tabular-nums }
+.W { background: var(--win) } .D { background: var(--draw) } .L { background: var(--loss) } .N { background: var(--surface-2); color: var(--muted) }
+.res-txt { font: 700 20px/1.1 var(--display); text-transform: uppercase }
+.breakdown { font: 500 12px/1.6 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.mm { display: flex; flex-wrap: wrap; gap: 6px }
+.pill { font: 600 12px/1 var(--body); padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted) }
+.pill.ok { background: var(--win); border-color: var(--win); color: var(--on-accent) }
+.pill.bad { background: var(--loss); border-color: var(--loss); color: var(--on-accent) }
+
+.banner { border-radius: 12px; padding: 12px 14px; font-size: 14px; border: 1px solid var(--line); background: var(--surface); border-left: 4px solid var(--blue) }
+.banner.hot { border-left-color: var(--loss) }
+.banner.warn { border-left-color: var(--draw) }
+.banner b { font-family: var(--display); text-transform: uppercase; letter-spacing: .04em; font-size: 15px }
+
+/* timetable */
+.tt { display: flex; flex-direction: column }
+.blk { display: grid; grid-template-columns: 52px 1fr 40px; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); align-items: start }
+.blk:first-child { border-top: 0 }
+.blk .time { font: 700 13px/1.4 var(--mono); font-variant-numeric: tabular-nums; padding-top: 2px }
+.blk .code { font: 700 13px/1 var(--display); letter-spacing: .08em; color: var(--garnet); text-transform: uppercase }
+.blk .t { font-weight: 600; margin-top: 3px }
+.blk .d { font-size: 14px; color: var(--muted); margin-top: 2px }
+.blk.now { background: var(--surface-2); margin: 0 -16px; padding-left: 16px; padding-right: 16px; border-radius: 10px; border-top-color: transparent }
+.blk.now .time { color: var(--blue) }
+.blk.past:not(.done) .t { color: var(--muted) }
+.chk { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--line); background: transparent; display: grid; place-items: center; font: 700 18px/1 var(--body); color: transparent }
+.chk.on { background: var(--win); border-color: var(--win); color: var(--on-accent) }
+.chk[disabled] { opacity: .35; cursor: default }
+.free-tag { font: 500 10px/1 var(--mono); letter-spacing: .1em; color: var(--muted); text-transform: uppercase; padding-top: 10px; text-align: center }
+.line-item { display: grid; grid-template-columns: 1fr 40px; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line) }
+.line-item:first-of-type { border-top: 0 }
+.yel.on { background: var(--draw); border-color: var(--draw); color: var(--on-accent) }
+.redc.on { background: var(--loss); border-color: var(--loss); color: var(--on-accent) }
+.ctr { display: flex; align-items: center; gap: 10px }
+.ctr button { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-weight: 700 }
+.ctr span { font: 700 18px/1 var(--mono); min-width: 2ch; text-align: center }
+
+.daynav { display: flex; align-items: center; justify-content: space-between; gap: 8px }
+.daynav button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 12px; font-weight: 600 }
+.daynav button[disabled] { opacity: .35; cursor: default }
+.daynav .dn-mid { text-align: center; min-width: 0 }
+.dn-mid strong { font: 700 18px/1.1 var(--display); text-transform: uppercase; display: block }
+
+.btn { border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 700; background: var(--garnet); color: var(--on-accent) }
+.btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--fg) }
+.btn.blue { background: var(--blue) }
+input[type=text], input[type=number], input[type=date], textarea, select { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0 }
+textarea { width: 100%; min-height: 96px; resize: vertical; line-height: 1.5 }
+.toggle { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line) }
+.toggle:first-of-type { border-top: 0 }
+.sw { width: 50px; height: 30px; border-radius: 999px; border: 0; background: var(--line); position: relative; flex: none }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); transition: left .15s }
+.sw.on { background: var(--win) } .sw.on::after { left: 23px }
+
+/* season */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px }
+.stat .v { font: 800 30px/1 var(--display); font-variant-numeric: tabular-nums }
+.form { display: flex; gap: 4px }
+.form span { width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; font: 700 13px/1 var(--display); color: var(--on-accent) }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px }
+.wd { display: flex; flex-direction: column; align-items: center; gap: 4px; font: 500 11px/1 var(--mono); color: var(--muted) }
+.wd .b { width: 100%; aspect-ratio: 1; max-width: 48px; border-radius: 8px; display: grid; place-items: center; font: 700 15px/1 var(--display); color: var(--on-accent); font-variant-numeric: tabular-nums }
+.wd .b.N { color: var(--muted) }
+.wd.today .b { outline: 2px solid var(--blue); outline-offset: 2px }
+.chart { width: 100%; overflow-x: auto }
+.chart svg { display: block; width: 100%; height: auto; min-width: 300px }
+.ax { font: 500 13px var(--mono); fill: var(--muted) }
+.grid-l { stroke: var(--line); stroke-width: 1 }
+.thr { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3 }
+.tgt { stroke: var(--blue); stroke-width: 2; stroke-dasharray: 5 4; fill: none }
+.act { stroke: var(--garnet); stroke-width: 2.5; fill: none }
+.dot { fill: var(--garnet) }
+.bar-W { fill: var(--win) } .bar-D { fill: var(--draw) } .bar-L { fill: var(--loss) } .bar-N { fill: var(--surface-2) }
+.phase-bar { display: grid; grid-template-columns: 14fr 42fr 44fr; gap: 3px; position: relative }
+.phase-bar div { height: 10px; background: var(--surface-2); border-radius: 3px }
+.phase-bar div.cur { background: var(--garnet) }
+.phase-lab { display: grid; grid-template-columns: 14fr 42fr 44fr; gap: 3px; font: 500 10px/1.2 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em }
+table { border-collapse: collapse; width: 100%; font-size: 14px }
+th, td { text-align: left; padding: 8px 8px; border-top: 1px solid var(--line); vertical-align: top }
+th { font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-top: 0 }
+td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap }
+.tbl { overflow-x: auto }
+.x { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0 4px }
+
+/* plan */
+.layers { display: flex; flex-direction: column; gap: 6px }
+.layer { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: start; padding: 12px; border-radius: 10px; background: var(--surface-2) }
+.layer .ln { font: 800 26px/1 var(--display); color: var(--garnet) }
+.layer strong { font: 700 17px/1.1 var(--display); text-transform: uppercase; letter-spacing: .04em; display: block }
+.layer span { font-size: 14px; color: var(--muted) }
+ul.clean { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px }
+.ladder { display: flex; flex-direction: column; gap: 0 }
+.rung { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line) }
+.rung:first-child { border-top: 0 }
+.rung .ln { font: 800 18px/1.2 var(--display); color: var(--muted) }
+.rung.here .ln { color: var(--garnet) }
+.rung strong { font-weight: 700 }
+.formula { font: 500 13px/1.7 var(--mono); background: var(--surface-2); border-radius: 10px; padding: 12px; overflow-x: auto; white-space: pre }
+details { border-top: 1px solid var(--line); padding-top: 10px }
+details summary { cursor: pointer; font: 700 16px/1.2 var(--display); text-transform: uppercase; letter-spacing: .04em; list-style: none; display: flex; justify-content: space-between }
+details summary::after { content: "+"; color: var(--muted) }
+details[open] summary::after { content: "–" }
+details > div { padding-top: 10px; display: flex; flex-direction: column; gap: 10px }
+
+/* nav */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 7; background: var(--surface); border-top: 1px solid var(--line);
+  padding-top: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)) }
+.tabs .inner { display: grid; grid-template-columns: repeat(5, 1fr); align-items: end }
+.tab { border: 0; background: none; padding: 6px 2px; display: flex; flex-direction: column; align-items: center; gap: 3px; font: 600 11px/1 var(--body); color: var(--muted) }
+.tab svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2 }
+.tab.on { color: var(--garnet) }
+.var-btn { justify-self: center; width: 60px; height: 60px; margin-top: -22px; border-radius: 50%; border: 4px solid var(--bg); background: var(--loss); color: var(--on-accent); font: 800 18px/1 var(--display); letter-spacing: .06em; box-shadow: 0 4px 14px rgba(0,0,0,.25) }
+
+/* VAR sheet */
+.sheet { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto; padding-top: calc(16px + env(safe-area-inset-top, 0px)); padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)) }
+.sheet .inner { display: flex; flex-direction: column; gap: 14px }
+.var-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.var-title { font: 800 34px/1 var(--display); color: var(--loss); letter-spacing: .04em }
+.sits { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.sit { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px; font-weight: 600; min-height: 64px }
+.sit small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; margin-top: 2px }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; font-size: 16px }
+.timer { font: 800 64px/1 var(--display); text-align: center; font-variant-numeric: tabular-nums }
+.quote { border-left: 4px solid var(--garnet); padding: 8px 14px; font-size: 17px; font-style: italic }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+@media (max-width: 380px) { .badge { width: 76px; height: 76px; font-size: 36px } .sits { grid-template-columns: 1fr } }
+</style>
+
+<header class="top pad"><div class="inner">
+  <div class="brand">DIEZ<b>·</b></div>
+  <div class="meta" id="meta">Loading…</div>
+  <span class="sync" id="sync" title="Saved on this device"></span>
+</div></header>
+
+<main class="pad"><div class="inner" id="view"></div></main>
+
+<nav class="tabs pad" aria-label="Sections"><div class="inner">
+  <button class="tab on" data-act="tab:today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Today</button>
+  <button class="tab" data-act="tab:season"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Season</button>
+  <button class="var-btn" data-act="var-open" aria-label="VAR: open the help protocols">VAR</button>
+  <button class="tab" data-act="tab:plan"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M3 12h18"/></svg>Plan</button>
+  <button class="tab" data-act="tab:room"><svg viewBox="0 0 24 24"><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M3 21h18M14 12h.01"/></svg>Dressing</button>
+</div></nav>
+
+<div class="sheet pad" id="var" hidden><div class="inner" id="var-body"></div></div>
+
+<script>
+/* ============ constants ============ */
+const START_WEIGHT = 82, GOAL_WEIGHT = 68, KG_PER_WEEK = 0.6;
+const HIS_CODE = "Change is the small habits you practice every day to become better than you were yesterday.";
+const HIS_JOY = "The feeling of holding a ball at my feet gives me the best joy.";
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const SETUP = [
+  ["delete", "Delete TikTok and X from your phone. Delete them, don't just limit them."],
+  ["dns", "Turn on the adult-content filter. Android: Settings → Network → Private DNS → family.cloudflare-dns.com. iPhone: Screen Time → Content & Privacy → Limit Adult Websites."],
+  ["gray", "Turn on grayscale at night (Digital Wellbeing → Bedtime mode)."],
+  ["timers", "Set app timers: YouTube 30 min, series app 45 min."],
+  ["charger", "Move the phone charger away from your bed."],
+  ["alarm", "Set the alarm for Day 1 at 10:00. It moves earlier every 3 days."],
+  ["food", "Buy eggs, curd, paneer or chicken, oats, bananas and roasted chana."],
+  ["foot", "Get your 5th metatarsal checked by a doctor or sports physio. Sprint sessions stay locked until you tick this."],
+  ["room", "Clean your room. Lay out training clothes for Day 1."],
+  ["code", "Write your code in the Dressing room."]
+];
+
+const YELLOWS = [
+  ["alcohol", "Alcohol"],
+  ["fastfood", "Fast food outside the Sunday free meal"],
+  ["phonebed", "Phone in bed after lights out"],
+  ["overtime", "Games or series past the limit"]
+];
+
+const TESTS = {
+  run5k: { name: "5 km run", unit: "min:sec", target: "under 25:00", better: "low", start: "30–35 min" },
+  pushups: { name: "Push-ups in a row", unit: "reps", target: "30", better: "high", start: "6–15" },
+  sprint30: { name: "30 m sprint", unit: "seconds", target: "under 4.3", better: "low", start: "Day 1" },
+  juggle: { name: "Juggling record", unit: "touches", target: "200", better: "high", start: "Day 1" }
+};
+
+/* Pre-season and Competition split. am/pm per weekday (1 = Monday … 6 = Saturday) */
+const SPLIT = {
+  1: { am: ["SPEED", "Warm-up 15 min (jog, skips, leg swings). 8 × 20 m accelerations, walk back + 60 s rest. 6 × 10 m reaction starts. 20 min ball mastery."],
+       pm: ["GYM · LOWER", "Goblet or back squat 4×6–8, Romanian deadlift 3×8, split squat 3×8 each leg, slow calf raises 3×15, Copenhagen plank 3×20 s."] },
+  2: { am: ["ENGINE", "Norwegian 4×4: 10 min warm-up, then 4 × 4 min hard running (a few words possible, no sentences) with 3 min jog between."],
+       pm: ["FINISHING", "100 shots: 50 right foot, 50 left. Edge of the box, first-time, after a dribble. Count your goals and log the number."] },
+  3: { am: ["BALL MASTERY", "45 min: sole rolls, V-pulls, inside-outside, wall passes with both feet, one juggling record attempt. 15 min mobility."],
+       pm: ["GYM · UPPER + CORE", "Push-ups 4 × (max − 2), rows 4×10, overhead press 3×8, band pull-aparts 3×15, plank 3×45 s, dead bugs 3×10."] },
+  4: { am: ["TEMPO", "10 × 100 m at 70% pace, walk back between. Builds stamina without sprinting."],
+       pm: ["1v1 & DUELS", "Dribble moves at speed through cones, shielding against a wall or a friend, receiving on the half-turn, 15 min defensive footwork (jockeying, recovery runs)."] },
+  5: { am: ["AGILITY", "Ladder 10 min, 5-10-5 shuttle × 6, T-drill × 6, 6 × 30 m sprints with full rest."],
+       pm: ["GYM · POWER", "Jump squats 4×5, broad jumps 4×4, dumbbell or trap-bar deadlift 3×5, push press 3×5, farmer carry 3 × 30 m."] },
+  6: { am: ["MATCH DAY", "Play 11-a-side or small-sided with anyone you can find. Log minutes, goals and assists. No game? 6 km steady run + 30 min technical work."],
+       pm: ["RECOVERY", "20 min stretching, foam roll, foot rehab. Film one drill or your juggling for your highlight reel."] }
+};
+const LOCKED_SPEED = ["SPEED · LOCKED", "Your foot isn't cleared yet. Do 30 min tempo jog on grass + 20 min ball mastery instead. Sprints unlock when you tick \"Foot checked\" in Plan."];
+
+const VAR_SITS = {
+  urge: { t: "Porn urge", s: "Alone, late, phone in hand", steps: [
+    "Stand up now. Leave the room or go where your roommates are.",
+    "Put the phone face down on a table that isn't yours. Don't take it with you.",
+    "20 push-ups or 50 jumping jacks. Right now.",
+    "Cold water on your face and wrists.",
+    "Start the 10-minute timer. An urge peaks and then drops. You only have to outlast it, not beat it forever.",
+    "Read your code below. Then tap \"Urge beaten\"."], timer: true, urge: true },
+  scroll: { t: "Scroll trap", s: "Been on the phone too long", steps: [
+    "Say out loud: \"Stop.\"",
+    "Look at the timetable. What block should you be in right now?",
+    "Phone goes to the charger across the room.",
+    "Do the first 2 minutes of that block. Just 2 minutes, then decide.",
+    "If it's after Full-time, phone stays on the charger and you go to bed."] },
+  start: { t: "Can't start", s: "Task feels too big", steps: [
+    "Shrink it. Write the smallest next step (\"open the notes\", \"write one line\").",
+    "Set a 5-minute timer. You're allowed to quit after 5 minutes.",
+    "Phone in another room. Close every tab you don't need.",
+    "When the 5 minutes are up, decide: keep going or stop. Most days you'll keep going."] },
+  train: { t: "Don't want to train", s: "Tired, lazy, no motivation", steps: [
+    "Put your boots or trainers on. That's the only job.",
+    "Go outside and start the warm-up. Promise yourself just 10 minutes.",
+    "After 10 minutes, if you still feel sick or in pain, stop and log Injury time. If you're just lazy, finish the session.",
+    "Remember why: " + HIS_JOY] },
+  night: { t: "Late-night spiral", s: "Overthinking, can't sleep", steps: [
+    "Phone out of reach. Lights off.",
+    "Breathe 4-7-8: in for 4 seconds, hold for 7, out for 8. Do it 4 times.",
+    "If your head is loud, write it down on paper: what's worrying you and the one thing you'll do about it tomorrow.",
+    "Lie back down. Not sleeping is fine. Resting with eyes closed still counts."] },
+  ate: { t: "I ate badly", s: "Fast food, binge, late snack", steps: [
+    "Log the yellow card if it applies. Be honest.",
+    "No starving tomorrow. Your next meal is a normal Fuel meal.",
+    "Drink 500 ml water and go for a 15-minute walk.",
+    "One bad meal doesn't make you fat. Ten in a row do. Stop at one."] },
+  lost: { t: "I lost the day", s: "Streak broken, feel like quitting", steps: [
+    "Read this: missing once is an accident. Missing twice starts a pattern.",
+    "Tomorrow is a Bounce-back match. You only need the Minimum Match: wake on time, train, Deep Work 1, clean, lights out.",
+    "Do one small thing tonight: lay out your clothes, set the alarm, phone on the charger.",
+    "Past routines died because you quit after one bad day. This one doesn't."] }
+};
+
+/* ============ dates ============ */
+const pad2 = n => String(n).padStart(2, "0");
+const keyOf = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
+const diffDays = (a, b) => Math.round((parseKey(a) - parseKey(b)) / 864e5);
+const matchKey = () => { const d = new Date(); if (d.getHours() < 4) d.setDate(d.getDate() - 1); return keyOf(d); };
+const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() + (d.getHours() < 4 ? 1440 : 0); };
+const hm = m => `${pad2(Math.floor(m / 60) % 24)}:${pad2(m % 60)}`;
+const prettyDate = k => parseKey(k).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ============ state ============ */
+let profile = { start: null, exam: false, faith: false, setup: {}, manifesto: {}, weights: [], tests: [] };
+let days = {};
+let tab = "today", viewKey = matchKey(), varSit = null, timerEnd = 0, timerInt = null;
+
+try {
+  const c = JSON.parse(localStorage.getItem("diez-cache") || "null");
+  if (c) { profile = Object.assign(profile, c.profile || {}); days = c.days || {}; }
+} catch (e) {}
+
+/* ============ the plan generator ============ */
+function wakeFor(n) { return n <= 3 ? 600 : n <= 6 ? 510 : n <= 9 ? 420 : n <= 12 ? 375 : 330; }
+function phaseOf(n) {
+  if (n <= 14) return { id: "reset", name: "Reset", note: "Days 1–14 · sleep shift, phone detox, base fitness" };
+  if (n <= 56) return { id: "pre", name: "Pre-season", note: "Weeks 3–8 · full schedule, two sessions a day" };
+  return { id: "comp", name: "Competition", note: "Week 9+ · club football, matches, sharpening" };
+}
+
+function planFor(key) {
+  const n = diffDays(key, profile.start) + 1;
+  const phase = phaseOf(n), week = Math.ceil(n / 7), dow = parseKey(key).getDay();
+  const deload = n > 14 && week % 4 === 0;
+  const exam = !!profile.exam, faith = !!profile.faith;
+  const deloadTxt = deload ? " International break week: cut sets and reps by about 40%. No max efforts." : "";
+  const kick = { id: "kickoff", code: "KICK-OFF", t: "Up on the first alarm", d: "Feet on the floor. 500 ml water. Curtains open. Bed made. No phone for 30 minutes." + (faith ? " Fajr." : ""), w: 3, core: "wake" };
+  let blocks;
+
+  if (phase.id === "reset") {
+    const W = wakeFor(n);
+    let train;
+    if (dow === 0) train = ["EASY DAY", "30 min walk or light jog + 10 min stretching."];
+    else if (dow % 2 === 1) train = ["GYM · FOUNDATION", "Full body, light: squat 3×10, push-ups 3 × max, rows 3×10, plank 3×30 s, calf raises 3×15. Learn the form. Don't chase weight."];
+    else train = ["BALL + JOG", "20 min ball mastery, 20 min easy jog (you can talk), 5 min core. Eat fruit + curd 30 min before."];
+    if (exam) train = ["TRAINING · EXAM MODE", "30 min: easy jog + 10 min ball touches. Keeps your head clear."];
+    blocks = [
+      [0, 15, kick],
+      [15, 30, { id: "first", code: "FIRST TOUCH", t: "Daylight walk + foot rehab", d: "20 min walk outside in daylight, then 10 min foot & ankle rehab (Plan → Health).", w: 2 }],
+      [50, 25, { id: "fuel1", code: "FUEL 1", t: "Protein breakfast", d: "3 eggs or paneer bhurji + 1–2 roti or oats + a banana. Coffee is fine, go easy on sugar.", w: 1 }],
+      [80, 50, { id: "deep1", code: "DEEP WORK 1", t: "50 min study, phone in another room", d: exam ? "Exam topics or past papers. One topic. Timer on." : "One subject, timer on. At the end, write 3 lines on what you learned.", w: 3, core: "study" }],
+      [140, 30, { id: "skill", code: "SKILL", t: "Python from zero", d: "30 min of CS50P (Harvard, free online). Type every example yourself.", w: 1 }],
+      [270, 30, { id: "fuel2", code: "FUEL 2", t: "Lunch, plate rule", d: "Half vegetables, a quarter protein, a quarter rice or roti.", w: 1 }],
+      [300, 50, { id: "deep2", code: "DEEP WORK 2", t: "Second study block or class", d: "If a class is on, the class is the block.", w: 2 }],
+      [480, 45, { id: "train", code: train[0], t: "Training", d: train[1], w: 3, core: "train", train: true }],
+      [600, 50, { id: "deep3", code: dow === 0 ? "SCOUTING REPORT" : "DEEP WORK 3", t: dow === 0 ? "Weekly review" : "Review, class or life admin", d: dow === 0 ? "Weigh-in (Season tab). Read your week's ratings. Plan next week's classes into the gaps." : "30 min review of today's notes, then laundry, food shopping, room reset.", w: 1 }],
+      [780, 30, { id: "fuel3", code: "FUEL 3", t: "Dinner, last food of the day", d: "Protein + vegetables, small carbs. The kitchen closes after this.", w: 1 }],
+      [810, 120, { id: "free", code: exam ? "DEEP WORK 4" : "RECHARGE", t: exam ? "Exam revision, 60 min" : "Free time, earned", d: exam ? "Past papers, then a family call." : "Family call. One episode max. Games only on Sunday.", w: exam ? 2 : 0 }],
+      [930, 30, { id: "shutdown", code: "FULL-TIME", t: "Shutdown + rate the match", d: "Phone on the charger across the room. Screens off. Check your rating. Write tomorrow's first task.", w: 2 }],
+      [960, 0, { id: "lights", code: "LIGHTS OUT", t: "In bed, lights off", d: "The phone is never in the bed.", w: 3, core: "sleep" }]
+    ].map(([off, dur, b]) => Object.assign({ start: W + off, dur }, b));
+  } else if (dow === 0) {
+    blocks = [
+      [330, 15, kick],
+      [360, 75, { id: "am", code: "LONG RUN", t: "Zone 2, easy", d: "40–60 min easy run where you can still talk. Or a street match." + deloadTxt, w: 2, core: "train", train: true }],
+      [465, 30, { id: "fuel1", code: "FUEL 1", t: "Protein breakfast", d: "Eggs or paneer, oats or roti, fruit.", w: 1 }],
+      [510, 60, { id: "scout", code: "SCOUTING REPORT", t: "Weekly review", d: "Weigh-in (Season tab). First Sunday of the month: run the tests. Read your week's ratings. Plan next week's classes into the gaps.", w: 2 }],
+      [570, 50, { id: "deep1", code: "DEEP WORK", t: "One block: review the week", d: "Go back over the week's notes and fix what you didn't understand.", w: 3, core: "study" }],
+      [660, 90, { id: "prep", code: "MEAL PREP", t: "Food + room reset", d: "Laundry, buy the week's eggs, paneer, curd and fruit, clean the room.", w: 1 }],
+      [780, 30, { id: "fuel2", code: "FREE MEAL", t: "Your one free meal of the week", d: "Fast food is allowed here if you want it. Just this one meal.", w: 1 }],
+      [840, 240, { id: "free", code: "RECHARGE", t: "Free time, earned", d: "eFootball allowed (max 1 h). Friends. Rest.", w: 0 }],
+      [1095, 30, { id: "fuel3", code: "FUEL 3", t: "Dinner", d: "Back to normal food.", w: 1 }],
+      [1245, 30, { id: "shutdown", code: "FULL-TIME", t: "Shutdown + rate the match", d: "Phone on the charger. Screens off. Write Monday's first task.", w: 2 }],
+      [1290, 0, { id: "lights", code: "LIGHTS OUT", t: "In bed, lights off", d: "The phone is never in the bed.", w: 3, core: "sleep" }]
+    ].map(([start, dur, b]) => Object.assign({ start, dur }, b));
+  } else {
+    const sp = SPLIT[dow];
+    let am = (sp.am[0] === "SPEED" || sp.am[0] === "AGILITY") && !profile.setup.foot ? LOCKED_SPEED : sp.am;
+    let pm = sp.pm;
+    let amD = am[1], pmD = pm[1];
+    if (exam) { amD = "Exam mode, 45 min version: warm-up + the main set only. " + amD; pm = ["MOBILITY + JOG", ""]; pmD = "30 min jog + 10 min stretching. A brain break, not a workout."; }
+    blocks = [
+      [330, 15, kick],
+      [345, 75, { id: "am", code: "AM · " + am[0], t: "Morning session", d: amD + deloadTxt, w: 3, core: "train", train: true }],
+      [450, 30, { id: "fuel1", code: "FUEL 1", t: "Protein breakfast (after shower)", d: "3–4 eggs or paneer bhurji + 2 roti or oats + a banana.", w: 1 }],
+      [495, 110, { id: "deep1", code: "DEEP WORK 1", t: "2 × 50 min, phone in another room", d: exam ? "Past papers. Mark them yourself." : "Hardest subject first. 10 min break between the two blocks.", w: 3, core: "study" }],
+      [630, 45, { id: "skill", code: "SKILL", t: "Python, 45 min", d: "CS50P lectures + problem sets. Code every day, even 10 lines.", w: 1 }],
+      [675, 105, { id: "deep2", code: "DEEP WORK 2", t: "Study block or class", d: "If a class is on, the class is the block.", w: 2 }],
+      [780, 30, { id: "fuel2", code: "FUEL 2", t: "Lunch, plate rule", d: "Dal or chicken or paneer, sabzi, salad, curd, 2 roti or 1 cup of rice." + (faith ? " Dhuhr." : ""), w: 1 }],
+      [810, 30, { id: "half", code: "HALF-TIME", t: "Power nap or rest, then review", d: "20 min max, alarm on. Then 2 min: check your rating so far and fix what's open.", w: 1 }],
+      [840, 120, { id: "deep3", code: "DEEP WORK 3", t: "Study block or class", d: "Second-hardest subject, or class. Snack at 16:00: fruit + curd or sprouts.", w: 2 }],
+      [990, 75, { id: "pm", code: "PM · " + pm[0], t: "Evening session", d: pmD + deloadTxt, w: 2, train: true }],
+      [1095, 30, { id: "fuel3", code: "FUEL 3", t: "Dinner, the kitchen closes at 19:30", d: "Grilled chicken or paneer tikka + salad + 1–2 roti.", w: 1 }],
+      [1140, 90, { id: "free", code: exam ? "DEEP WORK 4" : "RECHARGE", t: exam ? "Exam revision, 60 min" : "Free time, earned", d: exam ? "Past papers, then a family call." : "Family call, stretching, one episode max.", w: exam ? 2 : 0 }],
+      [1245, 30, { id: "shutdown", code: "FULL-TIME", t: "Shutdown + rate the match", d: "Phone on the charger across the room. Screens off. Write tomorrow's first task.", w: 2 }],
+      [1290, 0, { id: "lights", code: "LIGHTS OUT", t: "In bed, lights off", d: "The phone is never in the bed.", w: 3, core: "sleep" }]
+    ].map(([start, dur, b]) => Object.assign({ start, dur }, b));
+  }
+
+  const reset = phase.id === "reset";
+  const trackers = [
+    { id: "steps", t: reset ? "8,000 steps" : "10,000 steps", w: 1, train: true },
+    { id: "water", t: "3 L water", w: 1 },
+    { id: "protein", t: reset ? "Protein in all 3 meals" : "140 g protein", w: 1 },
+    { id: "screen", t: reset ? "Screen time under 4 h" : "Screen time under 2 h", w: 2 },
+    { id: "foot", t: "Foot & ankle rehab, 10 min", w: 1 },
+    { id: "kitchen", t: "Nothing eaten after dinner", w: 1 }
+  ];
+  if (faith) trackers.push({ id: "prayers", t: "5 prayers", w: 2 });
+  return { n, phase, week, dow, deload, blocks, trackers };
+}
+
+/* ============ the rating algorithm ============ */
+function blankDay() { return { c: {}, y: {}, red: false, urges: 0, injury: false }; }
+function computeRating(key) {
+  const plan = planFor(key), log = days[key] || blankDay(), c = log.c || {};
+  let earned = 0, poss = 0;
+  for (const it of [...plan.blocks, ...plan.trackers]) {
+    if (!it.w || (log.injury && it.train)) continue;
+    poss += it.w; if (c[it.id]) earned += it.w;
+  }
+  const base = poss ? 10 * earned / poss : 0;
+  const yellows = Object.values(log.y || {}).filter(Boolean).length;
+  const bonus = Math.min(3, log.urges || 0) * 0.2;
+  const trainDone = log.injury || plan.blocks.some(b => b.core === "train" && c[b.id]);
+  const core = { wake: !!c.kickoff, train: !!trainDone, study: !!c.deep1, clean: !log.red, sleep: !!c.lights };
+  const coreAll = Object.values(core).every(Boolean);
+  let r = base - 0.5 * yellows + bonus;
+  if (log.red) r = Math.min(r, 4.9); else if (coreAll) r = Math.max(r, 5.0);
+  r = Math.round(Math.max(0, Math.min(10, r)) * 10) / 10;
+  return { r, res: r >= 7 ? "W" : r >= 5 ? "D" : "L", base, yellows, bonus, earned, poss, core, coreAll };
+}
+function resultFor(key) {
+  const today = matchKey();
+  if (!profile.start || key < profile.start || key > today) return null;
+  const log = days[key];
+  if (key === today) return Object.assign(computeRating(key), { live: true });
+  if (!log) return { r: 0, res: "L", missing: true };
+  const r = typeof log.r === "number" ? log.r : computeRating(key).r;
+  return { r, res: r >= 7 ? "W" : r >= 5 ? "D" : "L" };
+}
+
+/* ============ storage: db when available, this device otherwise ============ */
+let db = null, uid = null;
+const writing = {}, dirty = {}, timers = {};
+function cacheLocal() { try { localStorage.setItem("diez-cache", JSON.stringify({ profile, days })); } catch (e) {} }
+function profileRef() { return db.doc(`data/users/${uid}/profile`); }
+function dayRef(k) { return profileRef().collection("days").doc(k); }
+function persist(kind, key) {
+  cacheLocal();
+  if (!db) return;
+  const path = kind === "p" ? "p" : "d:" + key;
+  clearTimeout(timers[path]);
+  timers[path] = setTimeout(() => { delete timers[path]; flush(path, kind, key); }, 500);
+}
+async function flush(path, kind, key) {
+  if (writing[path]) { dirty[path] = true; return; }
+  writing[path] = true;
+  try {
+    do {
+      dirty[path] = false;
+      const ref = kind === "p" ? profileRef() : dayRef(key);
+      const data = JSON.parse(JSON.stringify(kind === "p" ? profile : days[key]));
+      try { await ref.set(data); }
+      catch (e) {
+        if (e && e.code === "unavailable") { await new Promise(r => setTimeout(r, 800 + Math.random() * 800)); await ref.set(data); }
+        else { setSync(false, "Couldn't sync. Saved on this device."); break; }
+      }
+    } while (dirty[path]);
+  } catch (e) { setSync(false, "Couldn't sync. Saved on this device."); }
+  writing[path] = false;
+}
+const busy = path => writing[path] || timers[path];
+function setSync(on, title) { const s = document.getElementById("sync"); s.classList.toggle("on", on); s.title = title; }
+
+async function connect() {
+  if (!window.claude || !window.claude.use) return;
+  try {
+    const [d, u] = await Promise.all([claude.use("db"), claude.use("user")]);
+    if (!d || !u) return;
+    const id = await u.id();
+    if (!id) return;
+    db = d; uid = id;
+    setSync(true, "Synced to your account");
+    let first = true;
+    profileRef().onSnapshot(snap => {
+      if (busy("p")) return;
+      if (snap.exists) { profile = Object.assign({ setup: {}, manifesto: {}, weights: [], tests: [] }, snap.data()); }
+      else if (first && profile.start) { persist("p"); Object.keys(days).forEach(k => persist("d", k)); }
+      first = false; cacheLocal(); softRender();
+    }, () => setSync(false, "Sync stopped. Saved on this device."));
+    profileRef().collection("days").onSnapshot(snap => {
+      snap.docChanges().forEach(ch => {
+        const k = ch.doc.id;
+        if (busy("d:" + k)) return;
+        if (ch.type === "removed") delete days[k]; else days[k] = ch.doc.data();
+      });
+      cacheLocal(); softRender();
+    }, () => setSync(false, "Sync stopped. Saved on this device."));
+  } catch (e) { db = null; }
+}
+
+/* ============ mutations ============ */
+function setDay(key, mut) {
+  const d = JSON.parse(JSON.stringify(days[key] || blankDay()));
+  d.c = d.c || {}; d.y = d.y || {};
+  mut(d); days[key] = d;
+  d.r = computeRating(key).r;
+  persist("d", key); render();
+}
+function setProfile(mut, rerender = true) { mut(profile); persist("p"); if (rerender) render(); }
+
+/* ============ render ============ */
+function header() {
+  const m = document.getElementById("meta");
+  if (!profile.start) { m.textContent = "Pre-match · set your kick-off"; return; }
+  const n = diffDays(matchKey(), profile.start) + 1;
+  if (n < 1) { m.textContent = `Kick-off in ${1 - n} day${1 - n === 1 ? "" : "s"}`; return; }
+  const p = planFor(matchKey());
+  m.textContent = `Day ${n} · Week ${p.week} · ${p.phase.name}${p.deload ? " · Int'l break" : ""}`;
+}
+
+function viewToday() {
+  const today = matchKey();
+  if (!profile.start || today < profile.start) return viewPrematch();
+  if (viewKey < profile.start) viewKey = profile.start;
+  if (viewKey > today) viewKey = today;
+  const k = viewKey, plan = planFor(k), log = days[k] || blankDay(), c = log.c || {};
+  const R = computeRating(k), isToday = k === today, nm = nowMin();
+  const code = (profile.manifesto.code || "").trim() || HIS_CODE;
+  const prev = addDays(k, -1), prevRes = resultFor(prev);
+  let h = `<div class="daynav">
+    <button data-act="day:-1" ${k <= profile.start ? "disabled" : ""} aria-label="Previous day">‹ Prev</button>
+    <div class="dn-mid"><strong>${isToday ? "Today" : prettyDate(k)} · Day ${plan.n}</strong><span class="lab">${esc(DOW[plan.dow])} · ${esc(plan.phase.name)}</span></div>
+    <button data-act="day:1" ${isToday ? "disabled" : ""} aria-label="Next day">Next ›</button></div>
+  <p class="code-line">“${esc(code)}”</p>`;
+
+  if (prevRes && prevRes.res === "L") h += `<div class="banner hot"><b>Bounce-back match.</b> You lost ${prevRes.missing ? "yesterday (nothing logged)" : "yesterday"}. Rule: never lose twice. Hit the Minimum Match 5 below and today can't be a loss.</div>`;
+  if (plan.deload) h += `<div class="banner"><b>International break.</b> Deload week. Same timetable, about 40% less training volume. Recover so you can go hard next week.</div>`;
+  if (profile.exam) h += `<div class="banner warn"><b>Exam mode on.</b> Training is shorter and there's an extra revision block. Turn it off in Plan after exams.</div>`;
+  if (plan.phase.id === "reset" && plan.n <= 13) h += `<div class="banner"><b>Sleep shift.</b> Wake ${hm(wakeFor(plan.n))} · lights out ${hm(wakeFor(plan.n) + 960)}. Every 3 days both move earlier until you reach 05:30 on Day 13.</div>`;
+
+  h += `<section class="card"><div class="rating">
+      <div class="badge ${R.res}">${R.r.toFixed(1)}</div>
+      <div class="stack" style="gap:6px">
+        <span class="lab">${isToday ? "Match rating · live" : "Match rating · full-time"}</span>
+        <span class="res-txt">${R.res === "W" ? "Win" : R.res === "D" ? "Draw" : "Loss"}${isToday ? " so far" : ""}</span>
+        <span class="breakdown">blocks ${R.earned}/${R.poss} pts → ${R.base.toFixed(1)}${R.yellows ? ` · ${R.yellows} yellow −${(R.yellows * .5).toFixed(1)}` : ""}${R.bonus ? ` · urges +${R.bonus.toFixed(1)}` : ""}${log.red ? " · red card, capped 4.9" : R.coreAll ? " · min. match floor 5.0" : ""}</span>
+      </div></div>
+    <div class="stack" style="gap:6px"><span class="lab">Minimum match 5</span><div class="mm">
+      ${[["wake", "Wake"], ["train", "Train"], ["study", "Deep Work 1"], ["clean", "Clean"], ["sleep", "Lights out"]].map(([id, t]) =>
+        `<span class="pill ${R.core[id] ? "ok" : id === "clean" ? "bad" : ""}">${R.core[id] ? "✓ " : ""}${t}</span>`).join("")}
+    </div></div></section>`;
+
+  if (isToday) {
+    const cur = plan.blocks.find(b => nm >= b.start && nm < b.start + Math.max(b.dur, 1));
+    const next = plan.blocks.find(b => b.start > nm);
+    h += `<section class="card" id="nowcard">${nowCard(cur, next, nm)}</section>`;
+  }
+
+  h += `<section class="card"><h3>Timetable</h3><div class="tt">`;
+  for (const b of plan.blocks) {
+    const isNow = isToday && nm >= b.start && nm < b.start + Math.max(b.dur, 1);
+    const past = isToday && nm >= b.start + b.dur && !isNow;
+    const end = b.dur ? `<br><span class="muted">${hm(b.start + b.dur)}</span>` : "";
+    const locked = log.injury && b.train;
+    h += `<div class="blk ${isNow ? "now" : ""} ${past ? "past" : ""} ${c[b.id] ? "done" : ""}">
+      <div class="time">${hm(b.start)}${end}</div>
+      <div><div class="code">${esc(b.code)}</div><div class="t">${esc(b.t)}</div><div class="d">${esc(b.d)}</div></div>
+      ${b.w ? `<button class="chk ${c[b.id] ? "on" : ""}" data-act="chk:${b.id}" ${locked ? "disabled" : ""} aria-pressed="${!!c[b.id]}" aria-label="Done: ${esc(b.code)}">✓</button>` : `<div class="free-tag">free</div>`}
+    </div>`;
+  }
+  h += `</div></section>`;
+
+  h += `<section class="card"><h3>Daily trackers</h3><div>`;
+  for (const t of plan.trackers) {
+    const locked = log.injury && t.train;
+    h += `<div class="line-item"><span>${esc(t.t)} <span class="muted small">· ${t.w} pt${t.w > 1 ? "s" : ""}</span></span>
+      <button class="chk ${c[t.id] ? "on" : ""}" data-act="chk:${t.id}" ${locked ? "disabled" : ""} aria-pressed="${!!c[t.id]}" aria-label="Done: ${esc(t.t)}">✓</button></div>`;
+  }
+  h += `</div></section>`;
+
+  h += `<section class="card"><h3>Cards & discipline</h3>
+    <p class="small muted">Be honest. Lying to the app is lying to yourself, and you're the only one watching.</p><div>
+    ${YELLOWS.map(([id, t]) => `<div class="line-item"><span>🟨 ${esc(t)} <span class="muted small">· −0.5</span></span>
+      <button class="chk yel ${log.y && log.y[id] ? "on" : ""}" data-act="yel:${id}" aria-pressed="${!!(log.y && log.y[id])}" aria-label="Yellow card: ${esc(t)}">!</button></div>`).join("")}
+    <div class="line-item"><span>🟥 <b>Porn</b> <span class="muted small">· red card, rating capped at 4.9</span></span>
+      <button class="chk redc ${log.red ? "on" : ""}" data-act="red" aria-pressed="${!!log.red}" aria-label="Red card">!</button></div>
+    <div class="line-item"><span>Urges beaten with VAR <span class="muted small">· +0.2 each, max +0.6</span></span>
+      <div class="ctr"><button data-act="urge:-1" aria-label="One less">−</button><span>${log.urges || 0}</span><button data-act="urge:1" aria-label="One more">+</button></div></div>
+    </div>
+    <div class="toggle"><span><b>Injury time</b><br><span class="small muted">Sick or injured today. Training and steps drop out of the score. Not for lazy days.</span></span>
+      <button class="sw ${log.injury ? "on" : ""}" data-act="injury" aria-pressed="${!!log.injury}" aria-label="Injury time"></button></div>
+  </section>`;
+  return h;
+}
+
+function nowCard(cur, next, nm) {
+  let h = `<span class="lab">${cur ? "Now" : "Between blocks"}</span>`;
+  if (cur) h += `<div><div class="code" style="font:700 14px/1 var(--display);letter-spacing:.08em;color:var(--garnet)">${esc(cur.code)}</div><h2 style="margin-top:4px">${esc(cur.t)}</h2><p class="muted small" style="margin-top:4px">${hm(cur.start)}${cur.dur ? "–" + hm(cur.start + cur.dur) : ""}</p></div>`;
+  if (next) { const m = next.start - nm; h += `<p class="small">Next: <b>${esc(next.code)}</b> at ${hm(next.start)} <span class="muted">(in ${m >= 60 ? Math.floor(m / 60) + " h " : ""}${m % 60} min)</span></p>`; }
+  else if (!cur) h += `<p class="small">Match over. Phone on the charger, lights out.</p>`;
+  return h;
+}
+
+function viewPrematch() {
+  const tomorrow = addDays(matchKey(), 1);
+  const s = profile.start;
+  const done = SETUP.filter(([id]) => profile.setup[id]).length;
+  return `<section class="card">
+    <span class="lab">Pre-match</span>
+    <h2>${s ? `Kick-off: ${prettyDate(s)}` : "Set your kick-off day"}</h2>
+    <p class="small">Day 1 starts the 14-day Reset. You won't jump to 05:30 on day one. That's what broke your old routines. Your wake time moves from 10:00 to 05:30 in steps over 13 days.</p>
+    <div class="row"><input type="date" id="start-date" value="${s || tomorrow}" aria-label="Kick-off date"><button class="btn" data-act="setstart">${s ? "Change kick-off" : "Set kick-off"}</button></div>
+  </section>
+  <section class="card"><h3>Day 0 · prepare the pitch <span class="muted">${done}/${SETUP.length}</span></h3>${setupList()}</section>
+  <section class="card"><h3>How a day is scored</h3><p class="small">Every block you finish earns points. Your day gets a match rating out of 10, like a player rating after a game. 7.0 or more is a win. 5.0–6.9 is a draw. Under 5.0 is a loss. Plan → The rating has the full formula.</p></section>`;
+}
+
+function setupList() {
+  return `<div>${SETUP.map(([id, t]) => `<div class="line-item"><span class="small">${esc(t)}</span>
+    <button class="chk ${profile.setup[id] ? "on" : ""}" data-act="setup:${id}" aria-pressed="${!!profile.setup[id]}" aria-label="Done">✓</button></div>`).join("")}</div>`;
+}
+
+function viewSeason() {
+  if (!profile.start) return `<section class="card"><h2>No season yet</h2><p class="small">Set your kick-off on the Today tab. Your ratings, streaks, weight and tests will show here.</p></section>`;
+  const today = matchKey();
+  const n = Math.max(1, diffDays(today, profile.start) + 1);
+  const ph = phaseOf(n);
+  const started = today >= profile.start;
+
+  let unbeaten = 0, clean = 0;
+  if (started) {
+    for (let k = today; k >= profile.start; k = addDays(k, -1)) {
+      const r = resultFor(k); if (k === today && r.res === "L") continue;
+      if (r.res === "L") break; unbeaten++;
+    }
+    for (let k = today; k >= profile.start; k = addDays(k, -1)) {
+      const d = days[k]; if (k === today && !d) continue;
+      if (!d || d.red) break; clean++;
+    }
+  }
+  const last7 = []; for (let i = 0; i < 7; i++) { const k = addDays(today, -i); const r = resultFor(k); if (r) last7.push(r.r); }
+  const avg = last7.length ? (last7.reduce((a, b) => a + b, 0) / last7.length).toFixed(1) : "–";
+  const form = []; for (let i = 0; form.length < 5 && i < 60; i++) { const k = addDays(today, -i); const r = resultFor(k); if (!r) break; form.unshift(r); }
+
+  const wk = Math.ceil(n / 7), wkStart = addDays(profile.start, (wk - 1) * 7);
+  let pts = 0, played = 0, w = 0, d = 0, l = 0, cells = "";
+  for (let i = 0; i < 7; i++) {
+    const k = addDays(wkStart, i), r = resultFor(k);
+    if (r) { played++; pts += r.res === "W" ? 3 : r.res === "D" ? 1 : 0; r.res === "W" ? w++ : r.res === "D" ? d++ : l++; }
+    cells += `<div class="wd ${k === today ? "today" : ""}"><div class="b ${r ? r.res : "N"}">${r ? r.r.toFixed(1) : "–"}</div>${DOW[parseKey(k).getDay()]}</div>`;
+  }
+
+  let h = `<section class="card"><span class="lab">Season · Day ${n}</span><h2>${ph.name}</h2><p class="small muted">${ph.note}</p>
+    <div class="phase-bar"><div class="${ph.id === "reset" ? "cur" : ""}"></div><div class="${ph.id === "pre" ? "cur" : ""}"></div><div class="${ph.id === "comp" ? "cur" : ""}"></div></div>
+    <div class="phase-lab"><span>Reset</span><span>Pre-season</span><span>Competition</span></div></section>
+  <div class="stats">
+    <div class="stat"><span class="lab">Unbeaten run</span><span class="v">${unbeaten}</span><span class="small muted">days without a loss</span></div>
+    <div class="stat"><span class="lab">Clean streak</span><span class="v">${clean}</span><span class="small muted">days porn-free, logged</span></div>
+    <div class="stat"><span class="lab">7-day average</span><span class="v">${avg}</span><span class="small muted">match rating</span></div>
+    <div class="stat"><span class="lab">Form</span><div class="form">${form.map(r => `<span class="${r.res}">${r.res}</span>`).join("") || `<span class="muted small">–</span>`}</div><span class="small muted">last 5, newest right</span></div>
+  </div>
+  <section class="card"><h3>Matchweek ${wk}</h3><div class="week">${cells}</div>
+    <p class="small"><b>${pts} pts</b> <span class="muted">· W${w} D${d} L${l} · target 15+ pts a week (5 wins)</span></p></section>`;
+
+  h += `<section class="card"><h3>Ratings · last 28 days</h3><div class="chart">${ratingChart(today)}</div>
+    <p class="small muted">Dashed lines: 5.0 (draw) and 7.0 (win). A day with nothing logged counts as 0.</p></section>`;
+
+  const ws = [...profile.weights].sort((a, b) => a.d < b.d ? -1 : 1);
+  const latest = ws.length ? ws[ws.length - 1].kg : START_WEIGHT;
+  const weeksLeft = Math.max(0, (latest - GOAL_WEIGHT) / KG_PER_WEEK);
+  const eta = addDays(today, Math.round(weeksLeft * 7));
+  h += `<section class="card"><h3>Weight</h3>
+    <p class="small">Now <b>${latest} kg</b> → goal <b>${GOAL_WEIGHT} kg</b>. At ${KG_PER_WEEK} kg a week you get there around <b>${prettyDate(eta)} ${parseKey(eta).getFullYear()}</b>.</p>
+    <div class="chart">${weightChart(ws)}</div>
+    <div class="row"><input type="number" id="w-in" inputmode="decimal" step="0.1" min="40" max="150" placeholder="kg" style="width:110px" aria-label="Weight in kg"><button class="btn blue" data-act="addweight">Log weigh-in</button></div>
+    <p class="small muted">Weigh in on Sunday mornings, after the toilet, before food. Single days jump around, so watch the trend.</p>
+    ${ws.length ? `<div class="tbl"><table><tr><th>Date</th><th>kg</th><th></th></tr>${ws.slice(-6).reverse().map(e => `<tr><td>${prettyDate(e.d)}</td><td class="n">${e.kg}</td><td><button class="x" data-act="delw:${e.d}" aria-label="Delete">×</button></td></tr>`).join("")}</table></div>` : ""}
+  </section>`;
+
+  h += `<section class="card"><h3>Scouting tests</h3><p class="small muted">First Sunday of each month. Targets are for 12 weeks in.</p>
+    <div class="tbl"><table><tr><th>Test</th><th>Start</th><th>Latest</th><th>Target</th></tr>
+    ${Object.entries(TESTS).map(([id, t]) => { const e = profile.tests.filter(x => x.k === id).sort((a, b) => a.d < b.d ? -1 : 1); const la = e[e.length - 1];
+      return `<tr><td>${t.name}</td><td>${e.length ? esc(e[0].v) : t.start}</td><td class="n">${la ? esc(la.v) + `<br><span class="muted">${prettyDate(la.d)}</span>` : "–"}</td><td>${t.target}</td></tr>`; }).join("")}
+    </table></div>
+    <div class="row"><select id="t-kind" aria-label="Test">${Object.entries(TESTS).map(([id, t]) => `<option value="${id}">${t.name} (${t.unit})</option>`).join("")}</select>
+    <input type="text" id="t-val" placeholder="e.g. 31:20" style="width:110px" aria-label="Result"><button class="btn blue" data-act="addtest">Log</button></div>
+  </section>`;
+  return h;
+}
+
+function ratingChart(today) {
+  const W = 560, H = 180, L = 30, B = 24, T = 8, cw = (W - L - 4) / 28;
+  const y = v => T + (H - T - B) * (1 - v / 10);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Match ratings for the last 28 days">`;
+  [0, 5, 7, 10].forEach(v => { s += `<line class="${v === 5 || v === 7 ? "thr" : "grid-l"}" x1="${L}" x2="${W - 2}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`; });
+  for (let i = 0; i < 28; i++) {
+    const k = addDays(today, i - 27), r = resultFor(k), x = L + 2 + i * cw;
+    if (r) { const v = Math.max(r.r, 0.15); s += `<rect class="bar-${r.res}" x="${x}" y="${y(v)}" width="${cw - 3}" height="${y(0) - y(v)}" rx="2"/>`; }
+    else s += `<rect class="bar-N" x="${x}" y="${y(0) - 2}" width="${cw - 3}" height="2"/>`;
+    if (i % 7 === 6) s += `<text class="ax" x="${x + (cw - 3) / 2}" y="${H - 6}" text-anchor="middle">${parseKey(k).getDate()}/${parseKey(k).getMonth() + 1}</text>`;
+  }
+  return s + `</svg>`;
+}
+
+function weightChart(ws) {
+  const W = 560, H = 210, L = 34, B = 24, T = 10, R = 8;
+  const t0 = profile.start, weeks = 26;
+  const maxKg = Math.max(START_WEIGHT + 2, ...ws.map(e => e.kg)), minKg = GOAL_WEIGHT - 2;
+  const x = k => L + (W - L - R) * Math.min(1, Math.max(0, diffDays(k, t0) / (weeks * 7)));
+  const y = v => T + (H - T - B) * (maxKg - v) / (maxKg - minKg);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight trend against the target line">`;
+  for (let v = Math.ceil(minKg / 4) * 4; v <= maxKg; v += 4) s += `<line class="grid-l" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`;
+  const goalDay = addDays(t0, Math.round((START_WEIGHT - GOAL_WEIGHT) / KG_PER_WEEK * 7));
+  s += `<polyline class="tgt" points="${x(t0)},${y(START_WEIGHT)} ${x(goalDay)},${y(GOAL_WEIGHT)} ${W - R},${y(GOAL_WEIGHT)}"/>`;
+  [0, 8, 16, 24].forEach(wk => s += `<text class="ax" x="${x(addDays(t0, wk * 7))}" y="${H - 6}" text-anchor="${wk ? "middle" : "start"}">wk ${wk + 1}</text>`);
+  if (ws.length) {
+    s += `<polyline class="act" points="${ws.map(e => `${x(e.d)},${y(e.kg)}`).join(" ")}"/>`;
+    ws.forEach(e => s += `<circle class="dot" cx="${x(e.d)}" cy="${y(e.kg)}" r="3.5"/>`);
+  }
+  s += `<text class="ax" x="${W - R}" y="${y(GOAL_WEIGHT) + 16}" text-anchor="end">goal ${GOAL_WEIGHT} kg</text>`;
+  return s + `</svg>`;
+}
+
+function viewPlan() {
+  const n = profile.start ? diffDays(matchKey(), profile.start) + 1 : 0;
+  return `<section class="card"><span class="lab">The architecture</span><h2>DIEZ, the No. 10 system</h2>
+    <p class="small">You play the 10, Messi wore the 10 at Barça, and every day gets a rating out of 10. The whole system is built like a football career. Your life is the season. Every week is a matchweek. Every day is a match you win, draw or lose.</p>
+    <div class="layers">
+      <div class="layer"><span class="ln">L1</span><div><strong>Season</strong><span>The phases. Reset (14 days) → Pre-season (weeks 3–8) → Competition (week 9+). Every 4th week is an international break with less volume.</span></div></div>
+      <div class="layer"><span class="ln">L2</span><div><strong>Matchweek</strong><span>A weekly training split and a points table. Win = 3, draw = 1, loss = 0. Target 15+ points. Sunday is the Scouting report.</span></div></div>
+      <div class="layer"><span class="ln">L3</span><div><strong>Match</strong><span>The day: Kick-off → First touch → Deep work → Half-time → Sessions → Full-time → Lights out.</span></div></div>
+      <div class="layer"><span class="ln">L4</span><div><strong>Rating</strong><span>The algorithm. Weighted blocks, yellow and red cards, the Minimum Match floor. It gives a 0–10 rating.</span></div></div>
+      <div class="layer"><span class="ln">L5</span><div><strong>VAR</strong><span>The red button. Step-by-step protocols for the moments you usually fall: urges, scrolling, can't start, late-night spirals.</span></div></div>
+      <div class="layer"><span class="ln">L6</span><div><strong>Dressing room</strong><span>Your own words. VAR shows them to you when you need them.</span></div></div>
+    </div></section>
+
+  <section class="card"><h3>Settings</h3>
+    <div class="toggle"><span><b>Exam mode</b><br><span class="small muted">Shorter training plus an extra revision block. Turn it on for the post-Diwali exams.</span></span><button class="sw ${profile.exam ? "on" : ""}" data-act="exam" aria-pressed="${!!profile.exam}" aria-label="Exam mode"></button></div>
+    <div class="toggle"><span><b>Faith anchors</b><br><span class="small muted">You said you stopped praying. If you want it back, this adds Fajr at kick-off and a 5-prayers tracker. Your call, no pressure.</span></span><button class="sw ${profile.faith ? "on" : ""}" data-act="faith" aria-pressed="${!!profile.faith}" aria-label="Faith anchors"></button></div>
+    <div class="toggle"><span><b>Kick-off date</b><br><span class="small muted">${profile.start ? prettyDate(profile.start) + " " + parseKey(profile.start).getFullYear() + (n > 0 ? ` · today is Day ${n}` : "") : "Not set"}</span></span>
+      <span class="row"><input type="date" id="start-date" value="${profile.start || addDays(matchKey(), 1)}" aria-label="Kick-off date"><button class="btn ghost" data-act="setstart">Save</button></span></div>
+    <p class="small muted" id="sync-note">${db ? "Your log syncs to your account and stays private to you." : "Your log is saved on this device."}</p>
+  </section>
+
+  <section class="card"><h3>Day 0 checklist</h3>${setupList()}</section>
+
+  <section class="card"><h3>The rating</h3>
+<div class="formula">base    = 10 × points earned / points possible
+rating  = base − 0.5 × yellow cards + 0.2 × urges beaten (max 3)
+if all of the Minimum Match 5 are done:
+        rating = max(rating, 5.0)     ← a bad day stays a draw
+if red card (porn):
+        rating = min(rating, 4.9)     ← always a loss
+result  = W if ≥ 7.0 · D if 5.0–6.9 · L if < 5.0
+no log  = 0.0 · L</div>
+    <p class="small"><b>Minimum Match 5:</b> wake on time, any training, Deep Work 1, clean, lights out. On your worst day, do just these five. You get a draw, and you don't lose twice.</p>
+    <p class="small"><b>Never lose twice.</b> After a loss, the next day is a Bounce-back match. Your old routines died after one missed day. Under this rule, one missed day is never the end.</p>
+  </section>
+
+  <section class="card">
+    <details open><summary>Sleep shift · Reset</summary><div>
+      <div class="tbl"><table><tr><th>Days</th><th>Wake</th><th>Lights out</th></tr>
+      ${[[1, 3], [4, 6], [7, 9], [10, 12], [13, 14]].map(([a, b]) => `<tr><td class="n">${a}–${b}</td><td class="n">${hm(wakeFor(a))}</td><td class="n">${hm(wakeFor(a) + 960)}</td></tr>`).join("")}
+      <tr><td class="n">15+</td><td class="n">05:30</td><td class="n">21:30</td></tr></table></div>
+      <p class="small">You go from 12:45 to 05:30 without a shock. Get daylight within 30 minutes of waking (that's First touch). Coffee before 14:00 only. Weekends keep the same wake time: sleeping until 14:50 on Saturday resets all your progress.</p>
+    </div></details>
+
+    <details><summary>Weekly training split</summary><div>
+      <div class="tbl"><table><tr><th>Day</th><th>AM · 05:45</th><th>PM · 16:30</th></tr>
+      ${[1, 2, 3, 4, 5, 6].map(d => `<tr><td>${DOW[d]}</td><td>${SPLIT[d].am[0]}</td><td>${SPLIT[d].pm[0]}</td></tr>`).join("")}
+      <tr><td>Sun</td><td>LONG RUN</td><td>rest</td></tr></table></div>
+      <p class="small">This split targets your weaknesses: speed (Mon, Fri), stamina (Tue, Thu, Sun), finishing (Tue), duels and defending (Thu), strength (gym ×3). Your strengths stay sharp through ball mastery and match days. In Reset you do one session a day: gym foundation on Mon/Wed/Fri, ball + jog on Tue/Thu/Sat.</p>
+    </div></details>
+
+    <details><summary>Fuel · losing 14 kg</summary><div>
+      <p class="small"><b>About 2,300 kcal and 140–150 g protein a day.</b> This is an estimate from your height, weight, age and training load. If your Sunday weight hasn't moved for 2 weeks, cut about 150 kcal. Target pace: ${KG_PER_WEEK} kg a week, so 82 → 68 kg in about 23 weeks.</p>
+      <ul class="clean small">
+        <li><b>Plate rule:</b> half vegetables, a quarter protein, a quarter rice or roti. Right now you eat the reverse.</li>
+        <li><b>Protein you can buy in Vadodara:</b> eggs, chicken (halal), paneer, curd/dahi, dal, chana, rajma, soya chunks, sprouts, milk.</li>
+        <li><b>Breakfast:</b> 3–4 eggs or paneer bhurji + 2 roti or poha + banana. <b>Lunch:</b> dal + sabzi + salad + curd + 2 roti. <b>Snack:</b> sprouts chaat, roasted chana or fruit + curd. <b>Dinner:</b> tandoori chicken or paneer tikka + salad + 1–2 roti.</li>
+        <li><b>Cut:</b> fried farsan (fafda, gathiya, sev), samosa, vada pav, cold drinks, late-night Maggi, sugary chai several times a day.</li>
+        <li><b>Kitchen closes</b> after dinner. Late-night eating was one of your triggers.</li>
+        <li><b>Fast food:</b> once a week, at Sunday's free meal. <b>Alcohol:</b> none through Pre-season. Both are yellow cards.</li>
+        <li><b>Water:</b> 3 L. Vadodara is hot and you'll sweat in two sessions a day.</li>
+        <li><b>Fasting days:</b> keep protein at suhoor and iftar, and train lightly about 60 min before iftar or after it.</li>
+      </ul>
+    </div></details>
+
+    <details><summary>Phone rules</summary><div>
+      <ul class="clean small">
+        <li>TikTok and X are deleted. You use 8+ hours a day now. The target is under 4 h in Reset and under 2 h after.</li>
+        <li>YouTube on the laptop only, for study or drills.</li>
+        <li>eFootball and games only on Sunday, max 1 hour.</li>
+        <li>Series: one episode in the Recharge block. Netflix autoplay off.</li>
+        <li>The phone charges across the room from Full-time. It never goes in the bed. That's where late nights and urges start.</li>
+        <li>The Private DNS filter stays on.</li>
+      </ul>
+    </div></details>
+
+    <details><summary>Path to Barça · straight talk</summary><div>
+      <p class="small">You asked for a hard coach, so here it is. You're 23 and playing street football. A pro contract in 12 months is the hardest target in this plan. Most pros were in organized football for years before signing. It's not impossible, and late starters do get found, but only if you get into organized 11-a-side football now and your numbers jump. Barcelona is your North Star. The ladder is the job.</p>
+      <div class="ladder">
+        <div class="rung here"><span class="ln">0</span><div><strong>Street football</strong> <span class="muted small">· you are here</span></div></div>
+        <div class="rung"><span class="ln">1</span><div><strong>A registered club, months 1–3</strong><br><span class="small muted">Join a club that plays in the Baroda district league or the Gujarat State Football Association competitions. Ask at your university sports office and the local grounds.</span></div></div>
+        <div class="rung"><span class="ln">2</span><div><strong>Starter with numbers, months 3–8</strong><br><span class="small muted">11-a-side minutes, goals and assists logged. Build a 3–5 min highlight reel from your Saturday filming.</span></div></div>
+        <div class="rung"><span class="ln">3</span><div><strong>Trials, months 8–12</strong><br><span class="small muted">Open trials for higher-level Indian sides (Gujarat Super League, I-League 3 clubs), or clubs in Burundi's Primus League when you're home.</span></div></div>
+        <div class="rung"><span class="ln">4</span><div><strong>First contract</strong><br><span class="small muted">Any professional league. The first one is the hardest.</span></div></div>
+        <div class="rung"><span class="ln">5</span><div><strong>Burundi call-up</strong><br><span class="small muted">The national team scouts players in pro leagues abroad.</span></div></div>
+        <div class="rung"><span class="ln">6</span><div><strong>Europe → Barça</strong><br><span class="small muted">The dream. Chase it, but measure progress by the rung you're on.</span></div></div>
+      </div>
+      <p class="small">At 13+ years playing, with both feet, first touch, vision and passing, your technical base is real. What's missing is the engine: speed, stamina, strength. That's exactly what this plan attacks.</p>
+    </div></details>
+
+    <details><summary>MSc · the insurance policy</summary><div>
+      <p class="small">You said you're not interested in the course and you can't really code. Here's the deal: <b>you pass this semester.</b> A football career is short, and you've already had one bad injury. The degree is your insurance. It's not your prison.</p>
+      <ul class="clean small">
+        <li>Deep Work 1 every day, minimum. Turn on Exam mode for the post-Diwali exams.</li>
+        <li>Python from zero, every day: CS50P is free and starts at the very beginning. Coding is a skill you build, not a talent you're born with.</li>
+        <li><b>Transfer window</b>, the 1st of every month: answer the 3 questions in the Dressing room. Decide about the course with data, not with a bad mood.</li>
+      </ul>
+    </div></details>
+
+    <details><summary>Health · foot and mind</summary><div>
+      <ul class="clean small">
+        <li><b>5th metatarsal:</b> these fractures, especially the Jones type, can break again in footballers. You still feel some pain, so get an X-ray and a sports physio check before sprint work. Speed and Agility sessions stay locked until you tick it.</li>
+        <li><b>Pain rule:</b> sharp pain on the outer foot above 3/10 means stop the session and log Injury time. Dull muscle soreness is normal.</li>
+        <li><b>Daily foot & ankle rehab, 10 min:</b> slow calf raises 2×15, single-leg balance 3×30 s each foot, band eversion 2×15, towel scrunches 2×30 s, toe spreads.</li>
+        <li><b>Boots:</b> wear well-fitting boots with good support, and avoid worn-out studs on hard pitches.</li>
+        <li><b>Mind:</b> the injury hit you hard and you said you've lost direction. That's heavy. If your mood stays low for 2+ weeks, talk to your university counsellor or call Tele-MANAS (free, 24/7 in India): <b>14416</b>. Strong players use their medical staff.</li>
+      </ul>
+    </div></details>
+  </section>`;
+}
+
+const ROOM = [
+  ["code", "My code", "One line that runs everything. It shows at the top of Today and in VAR.", HIS_CODE],
+  ["why", "Why I'm doing this, for me", "Not for anyone else. What do you get when you win?", ""],
+  ["refuse", "The man I refuse to stay", "Describe him honestly: the 12:45 wake-ups, the phone, the porn, the wasted days.", ""],
+  ["night", "What I say to myself at 23:00 when I want to quit", "Write it now, while you're strong, for the version of you that's weak.", ""],
+  ["letter", "A letter from me at 28", "From the man who made it. What does he thank you for?", ""],
+  ["transfer", "Transfer window notes (1st of each month)", "1. Is the MSc still worth it? 2. What did I learn this month? 3. What do I change next month?", ""]
+];
+function viewRoom() {
+  return `<section class="card"><span class="lab">Dressing room</span><h2>Your words</h2>
+    <p class="small">Motivation from an app fades. Your own words don't. Write these yourself. VAR shows them to you in your weakest moments. Your first line is already here: you wrote it the day you started this.</p></section>
+    ${ROOM.map(([id, t, hint, def]) => `<section class="card"><h3>${esc(t)}</h3><p class="small muted">${esc(hint)}</p>
+      <textarea data-mf="${id}" id="mf-${id}" aria-label="${esc(t)}" placeholder="${esc(hint)}">${esc(profile.manifesto[id] ?? def)}</textarea></section>`).join("")}
+    <p class="small muted">Saves as you type.</p>`;
+}
+
+function render() {
+  header();
+  const v = document.getElementById("view");
+  v.innerHTML = tab === "today" ? viewToday() : tab === "season" ? viewSeason() : tab === "plan" ? viewPlan() : viewRoom();
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.act === "tab:" + tab));
+  if (!document.getElementById("var").hidden) renderVar();
+}
+function softRender() {
+  const a = document.activeElement;
+  if (a && (a.tagName === "TEXTAREA" || a.tagName === "INPUT" || a.tagName === "SELECT")) { header(); return; }
+  render();
+}
+
+/* ============ VAR ============ */
+function quoteLine() {
+  const m = profile.manifesto;
+  const lines = [m.night, m.code, m.why, m.letter].filter(s => s && s.trim());
+  return lines.length ? lines[Math.floor(Math.random() * lines.length)].trim().split("\n")[0] : HIS_CODE;
+}
+function renderVar() {
+  const b = document.getElementById("var-body");
+  let h = `<div class="var-head"><span class="var-title">VAR</span><button class="btn ghost" data-act="var-close">Close</button></div>`;
+  if (!varSit) {
+    h += `<p>Stop. Before you do anything, review the play. What's happening right now?</p><div class="sits">
+      ${Object.entries(VAR_SITS).map(([id, s]) => `<button class="sit" data-act="var-sit:${id}">${esc(s.t)}<small>${esc(s.s)}</small></button>`).join("")}</div>
+      <div class="quote">“${esc(quoteLine())}”</div>`;
+  } else {
+    const s = varSit === "slipped" ? SLIPPED : VAR_SITS[varSit];
+    h += `<button class="btn ghost" data-act="var-sit:" style="align-self:flex-start">‹ All situations</button><h2>${esc(s.t)}</h2>
+      <ol class="steps">${s.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol>`;
+    if (s.timer) h += `<div class="card"><div class="timer" id="timer">${timerText()}</div><button class="btn blue" data-act="var-timer">${timerEnd ? "Restart 10:00" : "Start 10-minute timer"}</button></div>`;
+    h += `<div class="quote">“${esc(quoteLine())}”</div>`;
+    if (s.urge) h += `<div class="row"><button class="btn" style="background:var(--win)" data-act="var-beaten">Urge beaten (+0.2)</button><button class="btn ghost" data-act="var-slip">I slipped</button></div>`;
+    else h += `<button class="btn" data-act="var-close">Back in the game</button>`;
+  }
+  b.innerHTML = h;
+}
+function timerText() {
+  if (!timerEnd) return "10:00";
+  const s = Math.max(0, Math.round((timerEnd - Date.now()) / 1000));
+  return s ? `${pad2(Math.floor(s / 60))}:${pad2(s % 60)}` : "Done ✓";
+}
+const SLIPPED = { t: "You slipped. Now the comeback.", s: "", steps: [
+  "The red card is logged. Being honest about it is still discipline.",
+  "Get up now. Shower, then leave the room for 20 minutes. Walk outside.",
+  "Phone on the charger, out of reach, for the rest of the night.",
+  "Tomorrow is a Bounce-back match. Minimum Match 5. Never lose twice.",
+  "You are not the slip. You're the comeback after it."] };
+
+/* ============ events ============ */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  const [act, arg] = el.dataset.act.split(/:(.*)/s);
+  const k = viewKey;
+  switch (act) {
+    case "tab": tab = arg; if (tab === "today") viewKey = matchKey(); render(); window.scrollTo(0, 0); break;
+    case "day": viewKey = addDays(viewKey, Number(arg)); render(); break;
+    case "chk": setDay(k, d => { d.c[arg] = !d.c[arg]; }); break;
+    case "yel": setDay(k, d => { d.y[arg] = !d.y[arg]; }); break;
+    case "red": setDay(k, d => { d.red = !d.red; }); break;
+    case "injury": setDay(k, d => { d.injury = !d.injury; }); break;
+    case "urge": setDay(k, d => { d.urges = Math.max(0, (d.urges || 0) + Number(arg)); }); break;
+    case "setup": setProfile(p => { p.setup = Object.assign({}, p.setup, { [arg]: !p.setup[arg] }); }); break;
+    case "exam": setProfile(p => { p.exam = !p.exam; }); break;
+    case "faith": setProfile(p => { p.faith = !p.faith; }); break;
+    case "setstart": { const v = document.getElementById("start-date").value; if (!v) return; setProfile(p => { p.start = v; }); viewKey = matchKey(); break; }
+    case "addweight": { const v = parseFloat(document.getElementById("w-in").value); if (!(v > 30 && v < 200)) return;
+      const d = matchKey(); setProfile(p => { p.weights = p.weights.filter(x => x.d !== d).concat({ d, kg: Math.round(v * 10) / 10 }); }); break; }
+    case "delw": setProfile(p => { p.weights = p.weights.filter(x => x.d !== arg); }); break;
+    case "addtest": { const kind = document.getElementById("t-kind").value, v = document.getElementById("t-val").value.trim(); if (!v) return;
+      const d = matchKey(); setProfile(p => { p.tests = p.tests.filter(x => !(x.k === kind && x.d === d)).concat({ d, k: kind, v: v.slice(0, 12) }); }); break; }
+    case "var-open": varSit = null; document.getElementById("var").hidden = false; renderVar(); document.body.style.overflow = "hidden"; break;
+    case "var-close": document.getElementById("var").hidden = true; document.body.style.overflow = ""; clearInterval(timerInt); timerEnd = 0; render(); break;
+    case "var-sit": varSit = arg || null; renderVar(); document.getElementById("var").scrollTo(0, 0); break;
+    case "var-timer": timerEnd = Date.now() + 600000; clearInterval(timerInt);
+      timerInt = setInterval(() => { const t = document.getElementById("timer"); if (t) t.textContent = timerText(); if (Date.now() >= timerEnd) clearInterval(timerInt); }, 1000); renderVar(); break;
+    case "var-beaten": if (profile.start && matchKey() >= profile.start) setDay(matchKey(), d => { d.urges = (d.urges || 0) + 1; });
+      document.getElementById("var").hidden = true; document.body.style.overflow = ""; clearInterval(timerInt); timerEnd = 0; tab = "today"; viewKey = matchKey(); render(); break;
+    case "var-slip": if (profile.start && matchKey() >= profile.start) setDay(matchKey(), d => { d.red = true; });
+      varSit = "slipped"; clearInterval(timerInt); timerEnd = 0; renderVar(); break;
+  }
+});
+
+const mfTimers = {};
+document.addEventListener("input", e => {
+  const id = e.target.dataset && e.target.dataset.mf; if (!id) return;
+  const val = e.target.value.slice(0, 4000);
+  clearTimeout(mfTimers[id]);
+  mfTimers[id] = setTimeout(() => setProfile(p => { p.manifesto = Object.assign({}, p.manifesto, { [id]: val }); }, false), 400);
+});
+
+setInterval(() => {
+  if (tab !== "today" || viewKey !== matchKey()) return;
+  const n = document.getElementById("nowcard"); if (!n) return;
+  const a = document.activeElement; if (a && a.tagName === "INPUT") return;
+  render();
+}, 60000);
+
+render();
+connect();
+</script>
